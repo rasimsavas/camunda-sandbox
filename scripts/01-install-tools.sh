@@ -39,14 +39,15 @@ install_if_missing kubectl \
     "kubectl"
 
 install_if_missing helm \
-    "" \
-    "helm"
+    "https://get.helm.sh/helm-v4.2.0-linux-amd64.tar.gz" \
+    "helm-v4.2.0-linux-amd64.tar.gz"
 
 if ! command -v helm >/dev/null 2>&1; then
     echo "  Installing helm from archive..."
-    curl -sL "https://get.helm.sh/helm-v4.2.0-linux-amd64.tar.gz" | tar xz -C /tmp/
+    tar xzf "$LOCAL_BIN/helm-v4.2.0-linux-amd64.tar.gz" -C /tmp/ linux-amd64/helm
     mv /tmp/linux-amd64/helm "$LOCAL_BIN/helm"
     chmod +x "$LOCAL_BIN/helm"
+    rm "$LOCAL_BIN/helm-v4.2.0-linux-amd64.tar.gz"
     echo "  helm: installed at $LOCAL_BIN/helm"
 fi
 

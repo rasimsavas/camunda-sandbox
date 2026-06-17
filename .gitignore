@@ -7,3 +7,6 @@ debug/
 .DS_Store
 .env
 .env.local
+.values.dev.yaml
+.values.local.yaml
+kubeconfig

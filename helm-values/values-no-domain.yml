@@ -60,6 +60,9 @@ identity:
             existingSecret: camunda-credentials
             existingSecretKey: identity-first-user-password
 
+# Note: Optimize is disabled by the camunda-rdbms.yml overlay since
+# Optimize does not support RDBMS secondary storage. The settings below
+# are ignored when SECONDARY_STORAGE=postgres.
 optimize:
     enabled: true
     resources:

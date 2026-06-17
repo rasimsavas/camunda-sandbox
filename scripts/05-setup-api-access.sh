@@ -8,6 +8,7 @@ source "$(dirname "$0")/../lib/common.sh"
 
 require_cmd kubectl
 require_cmd jq
+require_port_forward
 
 KEYCLOAK_PASS=$(kubectl get secret keycloak-initial-admin -n "$CAMUNDA_NAMESPACE" -o jsonpath='{.data.password}' | base64 -d)
 KC_ADMIN_TOKEN=$(curl -sf http://localhost:18080/auth/realms/master/protocol/openid-connect/token \

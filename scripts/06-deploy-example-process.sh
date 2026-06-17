@@ -8,6 +8,7 @@ source "$(dirname "$0")/../lib/common.sh"
 
 require_cmd kubectl
 require_cmd jq
+require_port_forward
 
 API_BASE="http://localhost:8080"
 KC_BASE="http://localhost:18080"

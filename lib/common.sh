@@ -62,3 +62,14 @@ get_keycloak_credentials() {
     echo "Keycloak Admin Username: $(kubectl get secret keycloak-initial-admin -n "$CAMUNDA_NAMESPACE" -o jsonpath='{.data.username}' 2>/dev/null | base64 -d)"
     echo "Keycloak Admin Password: $(kubectl get secret keycloak-initial-admin -n "$CAMUNDA_NAMESPACE" -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)"
 }
+
+require_port_forward() {
+    if ! curl -sf -o /dev/null http://localhost:18080/auth/ 2>/dev/null; then
+        echo "ERROR: Keycloak is not reachable at http://localhost:18080/auth/"
+        echo "  Start port-forwarding in a separate terminal:"
+        echo "    just port-forward"
+        echo "    or: ./scripts/port-forward.sh"
+        exit 1
+    fi
+    echo "Port-forward check: Keycloak reachable at localhost:18080"
+}
