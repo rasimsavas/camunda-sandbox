@@ -1,0 +1,9 @@
+debug/
+*.log
+
+*.swp
+*.swo
+*~
+.DS_Store
+.env
+.env.local

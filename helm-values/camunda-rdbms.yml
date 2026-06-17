@@ -1,0 +1,22 @@
+---
+orchestration:
+    exporters:
+        camunda:
+            enabled: false
+        rdbms:
+            enabled: true
+    data:
+        secondaryStorage:
+            type: rdbms
+            rdbms:
+                url: jdbc:postgresql://pg-camunda-rw:5432/camunda
+                username: camunda
+                secret:
+                    existingSecret: pg-camunda-secret
+                    existingSecretKey: password
+
+elasticsearch:
+    enabled: false
+
+optimize:
+    enabled: false

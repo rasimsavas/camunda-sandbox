@@ -1,0 +1,43 @@
+---
+global:
+    security:
+        authentication:
+            method: oidc
+
+    identity:
+        auth:
+            enabled: true
+            type: KEYCLOAK
+
+            issuerBackendUrl: http://keycloak-service:18080/auth/realms/camunda-platform
+            issuer: http://keycloak-service:18080/auth/realms/camunda-platform
+            publicIssuerUrl: http://keycloak-service:18080/auth/realms/camunda-platform
+
+        keycloak:
+            internal: false
+            url:
+                protocol: http
+                host: keycloak-service
+                port: '18080'
+            contextPath: /auth
+            realm: /realms/camunda-platform
+            auth:
+                adminUser: temp-admin
+                secret:
+                    existingSecret: keycloak-initial-admin
+                    existingSecretKey: password
+
+orchestration:
+    security:
+        authentication:
+            oidc:
+                redirectUrl: http://localhost:8080
+
+identityKeycloak:
+    enabled: false
+    postgresql:
+        enabled: false
+
+identity:
+    enabled: true
+    contextPath: /managementidentity

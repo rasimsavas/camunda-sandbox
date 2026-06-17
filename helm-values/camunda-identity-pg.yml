@@ -1,0 +1,16 @@
+---
+identity:
+    enabled: true
+
+    externalDatabase:
+        enabled: true
+        host: pg-identity-rw
+        port: 5432
+        database: identity
+        username: ''
+        secret:
+            existingSecret: pg-identity-secret
+            existingSecretKey: password
+
+identityPostgresql:
+    enabled: false

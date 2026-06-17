@@ -1,0 +1,21 @@
+---
+webModeler:
+    enabled: true
+
+    restapi:
+        externalDatabase:
+            enabled: true
+            host: pg-webmodeler-rw
+            port: 5432
+            database: webmodeler
+            user: webmodeler
+            secret:
+                existingSecret: pg-webmodeler-secret
+                existingSecretKey: password
+
+        mail:
+            fromAddress: noreply@camunda.local
+            fromName: Camunda Platform
+
+webModelerPostgresql:
+    enabled: false

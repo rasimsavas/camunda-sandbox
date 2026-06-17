@@ -1,0 +1,131 @@
+---
+global:
+    ingress:
+        enabled: false
+
+    identity:
+        auth:
+            admin:
+                secret:
+                    existingSecret: camunda-credentials
+                    existingSecretKey: identity-admin-client-token
+
+            optimize:
+                redirectUrl: http://localhost:8083
+                secret:
+                    existingSecret: camunda-credentials
+                    existingSecretKey: identity-optimize-client-token
+
+            console:
+                redirectUrl: http://localhost:8087
+
+            webModeler:
+                redirectUrl: http://localhost:8070
+
+connectors:
+    enabled: true
+    resources:
+        requests:
+            cpu: 100m
+            memory: 256Mi
+        limits:
+            cpu: 1000m
+            memory: 2Gi
+    security:
+        authentication:
+            oidc:
+                secret:
+                    existingSecret: camunda-credentials
+                    existingSecretKey: identity-connectors-client-token
+
+identity:
+    enabled: true
+    fullURL: http://localhost:8085
+
+    resources:
+        requests:
+            cpu: 50m
+            memory: 256Mi
+        limits:
+            cpu: 500m
+            memory: 1Gi
+
+    firstUser:
+        enabled: true
+        username: admin
+        email: admin@camunda.local
+        firstName: Admin
+        lastName: User
+        secret:
+            existingSecret: camunda-credentials
+            existingSecretKey: identity-first-user-password
+
+optimize:
+    enabled: true
+    resources:
+        requests:
+            cpu: 200m
+            memory: 256Mi
+        limits:
+            cpu: 1000m
+            memory: 1Gi
+
+orchestration:
+    clusterSize: '1'
+    partitionCount: '1'
+    replicationFactor: '1'
+    pvcSize: 10Gi
+    resources:
+        requests:
+            cpu: 300m
+            memory: 512Mi
+        limits:
+            cpu: 2000m
+            memory: 4Gi
+    security:
+        authentication:
+            oidc:
+                secret:
+                    existingSecret: camunda-credentials
+                    existingSecretKey: identity-orchestration-client-token
+        initialization:
+            defaultRoles:
+                admin:
+                    users:
+                        - admin
+
+console:
+    enabled: true
+    resources:
+        requests:
+            cpu: 50m
+            memory: 64Mi
+        limits:
+            cpu: 500m
+            memory: 256Mi
+
+webModeler:
+    restapi:
+        resources:
+            requests:
+                cpu: 100m
+                memory: 256Mi
+            limits:
+                cpu: 1000m
+                memory: 1Gi
+        pusher:
+            secret:
+                existingSecret: camunda-credentials
+                existingSecretKey: webmodeler-pusher-app-secret
+            client:
+                secret:
+                    existingSecret: camunda-credentials
+                    existingSecretKey: webmodeler-pusher-app-key
+    websockets:
+        resources:
+            requests:
+                cpu: 50m
+                memory: 128Mi
+            limits:
+                cpu: 500m
+                memory: 512Mi

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="example-process" name="Example Process" isExecutable="true">
+    <bpmn:startEvent id="start" name="Start">
+      <bpmn:outgoing>flow1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="task-process-order" name="Process Order">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="process-order" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>flow1</bpmn:incoming>
+      <bpmn:outgoing>flow2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="gateway" name="Approved?">
+      <bpmn:incoming>flow2</bpmn:incoming>
+      <bpmn:outgoing>flow3</bpmn:outgoing>
+      <bpmn:outgoing>flow4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="end-approved" name="Order Approved">
+      <bpmn:incoming>flow3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="end-rejected" name="Order Rejected">
+      <bpmn:incoming>flow4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="flow1" sourceRef="start" targetRef="task-process-order" />
+    <bpmn:sequenceFlow id="flow2" sourceRef="task-process-order" targetRef="gateway" />
+    <bpmn:sequenceFlow id="flow3" name="yes" sourceRef="gateway" targetRef="end-approved">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=approved=true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="flow4" name="no" sourceRef="gateway" targetRef="end-rejected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=approved=false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+</bpmn:definitions>
