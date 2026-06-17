@@ -11,7 +11,25 @@ SECONDARY_STORAGE="${SECONDARY_STORAGE:-postgres}"
 CAMUNDA_MODE="${CAMUNDA_MODE:-no-domain}"
 CAMUNDA_VERSION="${CAMUNDA_VERSION:-$(cat "$PROJECT_DIR/.camunda-version" 2>/dev/null || echo "8.9")}"
 
-export CLUSTER_NAME CAMUNDA_NAMESPACE CAMUNDA_RELEASE_NAME CAMUNDA_HELM_CHART_VERSION SECONDARY_STORAGE CAMUNDA_MODE CAMUNDA_VERSION
+get_lan_ip() {
+    if command -v ip >/dev/null 2>&1; then
+        local iface
+        iface=$(ip route get 1.1.1.1 2>/dev/null | grep -oP 'dev \K[^\s]+' | head -1)
+        if [ -n "$iface" ]; then
+            local addr
+            addr=$(ip -4 addr show "$iface" 2>/dev/null | grep -oP 'inet \K[0-9.]+' | head -1)
+            if [ -n "$addr" ]; then
+                echo "$addr"
+                return
+            fi
+        fi
+    fi
+    hostname -I 2>/dev/null | awk '{print $1}'
+}
+
+CAMUNDA_LAN_IP="${CAMUNDA_LAN_IP:-$(get_lan_ip)}"
+
+export CLUSTER_NAME CAMUNDA_NAMESPACE CAMUNDA_RELEASE_NAME CAMUNDA_HELM_CHART_VERSION SECONDARY_STORAGE CAMUNDA_MODE CAMUNDA_VERSION CAMUNDA_LAN_IP
 
 CONFIGS_DIR="$PROJECT_DIR/configs"
 HELM_VALUES_DIR="$PROJECT_DIR/helm-values"

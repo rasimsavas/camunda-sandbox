@@ -85,3 +85,10 @@ echo "  Instance 1 ($INSTANCE1_KEY): waiting at 'Process Order' task → will re
 echo "  Instance 2 ($INSTANCE2_KEY): waiting at 'Process Order' task → will reach 'Order Rejected'"
 echo ""
 echo "Both instances are ACTIVE, waiting for a job worker for task type 'process-order'."
+
+if [ -n "$CAMUNDA_LAN_IP" ] && [ "$CAMUNDA_LAN_IP" != "127.0.0.1" ]; then
+    echo ""
+    echo "=== Windows 11 (Browser Access) ==="
+    echo "Add '${CAMUNDA_LAN_IP}  keycloak-service' to C:\\Windows\\System32\\drivers\\etc\\hosts"
+    echo "then open Operate: http://keycloak-service:8080"
+fi

@@ -78,6 +78,8 @@ just port-forward      # Port-forward services (blocks, waits for readiness)
 just credentials       # Print admin credentials
 just credentials-quiet # Print password only
 just status            # Cluster/pod/service status
+just lan-ip            # Show detected LAN IP address
+just lan-hosts         # Show Windows hosts file entry for LAN access
 just cleanup           # Delete cluster + hosts entries
 ```
 
@@ -90,10 +92,72 @@ After running `just port-forward`:
 | Zeebe gRPC | `localhost:26500` | gRPC gateway |
 | Zeebe REST / Operate | `localhost:8080` | REST API, Operate UI, Tasklist |
 | Web Modeler | `localhost:8070` | BPMN modeler |
+| WebSockets | `localhost:8086` | Modeler live sync |
 | Connectors | `localhost:8088` | Connector runtime |
 | Console | `localhost:8087` | Management console |
-| Identity | `localhost:8085` | Identity management |
+| Identity | `localhost:8085/managementidentity/` | Identity management |
 | Keycloak | `localhost:18080/auth` | OIDC provider |
+
+## LAN Access (Windows / Other Machines)
+
+Port-forward binds to `0.0.0.0` (all interfaces), making services accessible from other machines on the same LAN.
+
+### Ubuntu Server Steps
+
+1. **Deploy Camunda with LAN overlay** (included automatically when `CAMUNDA_LAN_IP` is detected):
+   ```bash
+   just deploy-camunda
+   just setup-api
+   ```
+   The LAN overlay (`helm-values/camunda-lan.yml`) changes browser-facing URLs from `localhost` to `keycloak-service`.
+
+2. **Start port-forward** (in a separate terminal):
+   ```bash
+   just port-forward
+   ```
+
+3. **Note your LAN IP** (auto-detected):
+   ```bash
+   just lan-ip       # e.g. 192.168.1.14
+   just lan-hosts    # prints: 192.168.1.14  keycloak-service
+   ```
+
+### Windows 11 Steps
+
+1. **Edit the Windows hosts file** as Administrator.
+
+   Open `C:\Windows\System32\drivers\etc\hosts` in Notepad (Run as Administrator) and add this line:
+
+   ```
+   <LAN_IP>  keycloak-service
+   ```
+
+   Replace `<LAN_IP>` with the output of `just lan-hosts` from the Ubuntu server. For example:
+   ```
+   192.168.1.14  keycloak-service
+   ```
+
+2. **Open a browser on Windows** and navigate to:
+
+| Service | URL |
+    |---------|-----|
+    | Operate / Tasklist | `http://keycloak-service:8080` |
+    | Web Modeler | `http://keycloak-service:8070` |
+    | Console | `http://keycloak-service:8087` |
+    | Identity | `http://keycloak-service:8085/managementidentity/` |
+    | Keycloak | `http://keycloak-service:18080/auth` |
+
+3. **Login** with username `admin` and the password from `just credentials-quiet`.
+
+### How It Works
+
+1. **Ubuntu server** `/etc/hosts` has two entries: `127.0.0.1 keycloak-service` (for port-forward) and `<LAN_IP> keycloak-service`
+2. **Windows hosts file** maps `keycloak-service` → Ubuntu server's LAN IP, so the browser can reach the port-forwarded services
+3. **Helm overlay** (`camunda-lan.yml`) changes all browser-facing redirect URLs from `localhost` to `keycloak-service`, so OIDC login redirects work correctly from Windows
+4. **Keycloak** is configured with `hostname.strict: false`, so it accepts requests from any hostname
+5. **Port-forward** binds to `0.0.0.0`, so it accepts connections from any network interface (not just localhost)
+
+Override auto-detected LAN IP with: `CAMUNDA_LAN_IP=192.168.1.100 just deploy-camunda`
 
 ## API Access (CLI)
 
@@ -123,7 +187,8 @@ camunda-sandbox/
 │   ├── camunda-keycloak-no-domain.yml ← External Keycloak config
 │   ├── camunda-identity-pg.yml        ← Identity → external PostgreSQL
 │   ├── camunda-webmodeler-pg.yml      ← Web Modeler → external PostgreSQL
-│   └── camunda-rdbms.yml             ← RDBMS secondary storage + disable Optimize
+│   ├── camunda-rdbms.yml             ← RDBMS secondary storage + disable Optimize
+│   └── camunda-lan.yml               ← LAN overlay (redirect URLs use keycloak-service)
 ├── processes/
 │   └── example-process.bpmn        ← Example order processing BPMN
 └── scripts/
@@ -152,16 +217,20 @@ All overridable via environment (see `lib/common.sh` defaults):
 | `CAMUNDA_VERSION` | `8.9` (from `.camunda-version`) | Camunda major.minor version |
 | `SECONDARY_STORAGE` | `postgres` | `postgres` (RDBMS) or `elasticsearch` |
 | `CAMUNDA_MODE` | `no-domain` | Deployment mode |
+| `CAMUNDA_LAN_IP` | auto-detected | LAN IP for browser access from other machines |
 
 ## Known Issues / Workarounds
 
 - **OOMKilled**: Identity, Zeebe, and Connectors need increased memory limits (baked into `values-no-domain.yml`)
 - **Keycloak client**: The `api-cli` public client requires `directAccessGrantsEnabled=true` (not `directGrantsEnabled`)
+- **Two credential sets**: Use `admin` / `(just credentials-quiet)` for Camunda apps (Operate, Tasklist, Console, Modeler, Identity). Use `temp-admin` / `(Keycloak password)` only for the Keycloak Admin Console at `keycloak-service:18080/auth/admin/`
 - **/etc/hosts**: Must contain `127.0.0.1 keycloak-service` for no-domain mode; script 02 adds it automatically
 - **Docker group**: If `newgrp docker` is needed, wrap all kubectl/kind/helm commands accordingly
 - **Port-forward**: Required for localhost API access — scripts 05 and 06 validate connectivity before proceeding
 - **Cleanup sudo**: If running without a TTY, `cleanup.sh` cannot edit `/etc/hosts` automatically — remove the entry manually
 - **Optimize**: Shown as `enabled: true` in `values-no-domain.yml` but overridden to `false` by `camunda-rdbms.yml` since Optimize doesn't support RDBMS mode
+- **Identity URL**: Identity serves on context path `/managementidentity/`, not root. Access at `http://keycloak-service:8085/managementidentity/`
+- **LAN mode**: When `CAMUNDA_LAN_IP` is detected (and not 127.0.0.1), `camunda-lan.yml` is included in the Helm deploy to redirect browser URLs to `keycloak-service` hostname. Redeploy with `just deploy-camunda` after changing `CAMUNDA_LAN_IP`
 
 ## Troubleshooting
 

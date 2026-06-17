@@ -140,9 +140,10 @@ just port-forward
 | Zeebe gRPC | `localhost:26500` | gRPC gateway |
 | Zeebe REST / Operate | `localhost:8080` | REST API, Operate UI, Tasklist |
 | Web Modeler | `localhost:8070` | BPMN modeler |
+| WebSockets | `localhost:8086` | Modeler live sync |
 | Connectors | `localhost:8088` | Connector runtime |
 | Console | `localhost:8087` | Management console |
-| Identity | `localhost:8085` | Identity management |
+| Identity | `localhost:8085/managementidentity/` | Identity management |
 | Keycloak | `localhost:18080/auth` | OIDC provider |
 
 ## API Access (CLI)
@@ -192,6 +193,81 @@ Script 06 deploys this process and starts two instances with different `approved
 
 All instances stay in `ACTIVE` state at the `Process Order` service task until a job worker activates and completes jobs for task type `process-order`.
 
+## Credentials
+
+There are **two separate credential sets**:
+
+| Service | Username | Password | Where to use |
+|---------|----------|----------|---------------|
+| Camunda apps (Operate, Tasklist, Console, Modeler, Identity) | `admin` | Run `just credentials-quiet` | All Camunda web apps |
+| Keycloak Admin Console | `temp-admin` | Run `just credentials` | `keycloak-service:18080/auth/admin/` only |
+
+```bash
+just credentials         # Print both credential sets
+just credentials-quiet   # Print Camunda admin password only (for scripting)
+```
+
+## LAN Access (Windows / Other Machines)
+
+Port-forward binds to `0.0.0.0` (all interfaces), making services accessible from other machines on the same LAN.
+
+### Ubuntu Server Steps
+
+1. **Deploy Camunda with LAN overlay** (included automatically when `CAMUNDA_LAN_IP` is detected):
+   ```bash
+   just deploy-camunda
+   just setup-api
+   ```
+   The LAN overlay (`helm-values/camunda-lan.yml`) changes browser-facing URLs from `localhost` to `keycloak-service`.
+
+2. **Start port-forward** (in a separate terminal):
+   ```bash
+   just port-forward
+   ```
+
+3. **Note your LAN IP** (auto-detected):
+   ```bash
+   just lan-ip       # e.g. 192.168.1.14
+   just lan-hosts    # prints: 192.168.1.14  keycloak-service
+   ```
+
+### Windows 11 Steps
+
+1. **Edit the Windows hosts file** as Administrator.
+
+   Open `C:\Windows\System32\drivers\etc\hosts` in Notepad (Run as Administrator) and add this line:
+
+   ```
+   <LAN_IP>  keycloak-service
+   ```
+
+   Replace `<LAN_IP>` with the output of `just lan-hosts` from the Ubuntu server. For example:
+   ```
+   192.168.1.14  keycloak-service
+   ```
+
+2. **Open a browser on Windows** and navigate to:
+
+   | Service | URL |
+   |---------|-----|
+   | Operate / Tasklist | `http://keycloak-service:8080` |
+   | Web Modeler | `http://keycloak-service:8070` |
+   | Console | `http://keycloak-service:8087` |
+   | Identity | `http://keycloak-service:8085/managementidentity/` |
+   | Keycloak | `http://keycloak-service:18080/auth` |
+
+3. **Login** with username `admin` and the password from `just credentials-quiet`.
+
+### How It Works
+
+1. **Ubuntu server** `/etc/hosts` has two entries: `127.0.0.1 keycloak-service` (for port-forward) and `<LAN_IP> keycloak-service`
+2. **Windows hosts file** maps `keycloak-service` → Ubuntu server's LAN IP, so the browser can reach the port-forwarded services
+3. **Helm overlay** (`camunda-lan.yml`) changes all browser-facing redirect URLs from `localhost` to `keycloak-service`, so OIDC login redirects work correctly from Windows
+4. **Keycloak** is configured with `hostname.strict: false`, so it accepts requests from any hostname
+5. **Port-forward** binds to `0.0.0.0`, so it accepts connections from any network interface (not just localhost)
+
+Override auto-detected LAN IP with: `CAMUNDA_LAN_IP=192.168.1.100 just deploy-camunda`
+
 ## Configuration
 
 All settings are in `lib/common.sh` with environment variable overrides:
@@ -205,6 +281,7 @@ All settings are in `lib/common.sh` with environment variable overrides:
 | `CAMUNDA_VERSION` | `8.9` (from `.camunda-version`) | Camunda major.minor version |
 | `SECONDARY_STORAGE` | `postgres` | `postgres` (RDBMS) or `elasticsearch` |
 | `CAMUNDA_MODE` | `no-domain` | Deployment mode |
+| `CAMUNDA_LAN_IP` | auto-detected | LAN IP for browser access from other machines |
 
 ## Directory Structure
 
@@ -223,7 +300,8 @@ camunda-sandbox/
 │   ├── camunda-keycloak-no-domain.yml ← External Keycloak config
 │   ├── camunda-identity-pg.yml        ← Identity → external PostgreSQL
 │   ├── camunda-webmodeler-pg.yml      ← Web Modeler → external PostgreSQL
-│   └── camunda-rdbms.yml             ← RDBMS secondary storage + disable Optimize
+│   ├── camunda-rdbms.yml             ← RDBMS secondary storage + disable Optimize
+│   └── camunda-lan.yml               ← LAN overlay (redirect URLs use keycloak-service)
 ├── processes/
 │   └── example-process.bpmn        ← Example order processing BPMN
 └── scripts/
@@ -277,11 +355,17 @@ just setup-api    # Re-runs the client creation (idempotent)
 
 ### `/etc/hosts` required
 
-No-domain mode requires `127.0.0.1 keycloak-service` in `/etc/hosts`. Script 02 adds this automatically. If missing:
+No-domain mode requires `127.0.0.1 keycloak-service` in `/etc/hosts`. Script 02 adds it automatically. For LAN access, the script also adds `<LAN_IP> keycloak-service`. If either is missing:
 
 ```bash
 echo "127.0.0.1  keycloak-service" | sudo tee -a /etc/hosts
+# For LAN access (replace with your LAN IP):
+echo "192.168.1.14  keycloak-service" | sudo tee -a /etc/hosts
 ```
+
+### Identity returns 404 at root
+
+Identity serves on context path `/managementidentity/`, not root. Access it at `http://localhost:8085/managementidentity/` (or `http://keycloak-service:8085/managementidentity/` for LAN access).
 
 ### Port-forward required for API access
 
@@ -315,17 +399,6 @@ If `kind` or `kubectl` fail with Docker permission errors, add your user to the 
 ```bash
 sudo usermod -aG docker $USER
 newgrp docker
-```
-
-## Credentials
-
-```bash
-just credentials
-# or: ./scripts/get-credentials.sh
-
-# Password only (for scripting):
-just credentials-quiet
-# or: ./scripts/get-credentials.sh -q
 ```
 
 ## Status

@@ -44,6 +44,13 @@ if [[ "$SECONDARY_STORAGE" == "postgres" ]]; then
     COMMON_VALUES+=(--values "$HELM_VALUES_DIR/camunda-rdbms.yml")
 fi
 
+LAN_VALUES_FILE=""
+if [ -n "$CAMUNDA_LAN_IP" ] && [ "$CAMUNDA_LAN_IP" != "127.0.0.1" ] && [ "$CAMUNDA_LAN_IP" != "localhost" ]; then
+    echo "=== LAN mode enabled (LAN IP: ${CAMUNDA_LAN_IP}) ==="
+    echo "  Browser-facing URLs will use 'keycloak-service' hostname (resolves to ${CAMUNDA_LAN_IP} from LAN)."
+    COMMON_VALUES+=(--values "$HELM_VALUES_DIR/camunda-lan.yml")
+fi
+
 CAMUNDA_REPO="${CAMUNDA_REPO:-camunda}"
 CAMUNDA_CHART="${CAMUNDA_CHART:-camunda-platform}"
 

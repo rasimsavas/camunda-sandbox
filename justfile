@@ -52,6 +52,14 @@ credentials-quiet:
 status:
     bash scripts/status.sh
 
+# Show detected LAN IP address for browser access from other machines
+lan-ip:
+    @bash -c 'source lib/common.sh && echo "$CAMUNDA_LAN_IP"'
+
+# Show Windows hosts file entry needed for LAN browser access
+lan-hosts:
+    @bash -c 'source lib/common.sh && echo "$CAMUNDA_LAN_IP  keycloak-service"'
+
 # Delete Kind cluster + remove /etc/hosts entries
 cleanup:
     bash scripts/cleanup.sh

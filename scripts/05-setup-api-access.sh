@@ -113,8 +113,24 @@ else:
 "
 
 echo ""
-echo "API access configured. Use these commands to get a token:"
+echo "=== Ubuntu Server (API Access) ==="
+echo "Use these commands to get a token:"
 echo "  ADMIN_PASS=\$(scripts/get-credentials.sh -q)"
 echo "  TOKEN=\$(curl -s http://localhost:18080/auth/realms/camunda-platform/protocol/openid-connect/token \\"
 echo "    -d 'grant_type=password' -d 'client_id=api-cli' \\"
 echo "    -d 'username=admin' -d \"password=\$ADMIN_PASS\" | jq -r .access_token)"
+
+if [ -n "$CAMUNDA_LAN_IP" ] && [ "$CAMUNDA_LAN_IP" != "127.0.0.1" ]; then
+    echo ""
+    echo "=== Windows 11 (Browser Access) ==="
+    echo ""
+    echo "Step 1: Add this line to C:\\Windows\\System32\\drivers\\etc\\hosts (run Notepad as Admin):"
+    echo "  ${CAMUNDA_LAN_IP}  keycloak-service"
+    echo ""
+    echo "Step 2: Open these URLs in a Windows browser:"
+    echo "  - Operate / Tasklist: http://keycloak-service:8080"
+    echo "  - Web Modeler:        http://keycloak-service:8070"
+    echo "  - Console:             http://keycloak-service:8087"
+    echo "  - Identity:             http://keycloak-service:8085"
+    echo "  - Keycloak:             http://keycloak-service:18080/auth"
+fi

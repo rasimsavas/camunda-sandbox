@@ -40,7 +40,7 @@ connectors:
 
 identity:
     enabled: true
-    fullURL: http://localhost:8085
+    fullURL: http://localhost:8085/managementidentity
 
     resources:
         requests:
@@ -125,6 +125,8 @@ webModeler:
                     existingSecret: camunda-credentials
                     existingSecretKey: webmodeler-pusher-app-key
     websockets:
+        publicHost: localhost
+        publicPort: 8086
         resources:
             requests:
                 cpu: 50m

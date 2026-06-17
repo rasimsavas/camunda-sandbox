@@ -1,0 +1,36 @@
+---
+global:
+    identity:
+        auth:
+            optimize:
+                redirectUrl: http://keycloak-service:8083
+            console:
+                redirectUrl: http://keycloak-service:8087
+            webModeler:
+                redirectUrl: http://keycloak-service:8070
+
+identity:
+    fullURL: http://keycloak-service:8085/managementidentity
+
+orchestration:
+    security:
+        authentication:
+            oidc:
+                redirectUrl: http://keycloak-service:8080
+
+webModeler:
+    websockets:
+        publicHost: keycloak-service
+        publicPort: 8086
+    restapi:
+        clusters:
+            - id: default-cluster
+              name: camunda-zeebe
+              version: 8.9.7
+              authentication: BEARER_TOKEN
+              authorizations:
+                  enabled: true
+              url:
+                  grpc: grpc://camunda-zeebe-gateway:26500
+                  rest: http://camunda-zeebe-gateway:8080
+                  web-app: http://keycloak-service:8080
