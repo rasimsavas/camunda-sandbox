@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+                  id="secret-test-process"
+                  targetNamespace="http://camunda.org/examples"
+                  exporter="Camunda Modeler"
+                  exporterVersion="5.0.0">
+  
+  <bpmn:process id="secret-test" name="Secret Provider Test" isExecutable="true">
+    
+    <bpmn:startEvent id="StartEvent_1" name="Start">
+      <bpmn:outgoing>Flow_to_test_connector</bpmn:outgoing>
+    </bpmn:startEvent>
+    
+    <bpmn:serviceTask id="test-secret-connector" name="Test Secret Resolution">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="io.camunda:http-json:1"/>
+        <zeebe:ioMapping>
+          <zeebe:input source="=&quot;https://httpbin.org/post&quot;" target="url"/>
+          <zeebe:input source="=&quot;post&quot;" target="method"/>
+          <zeebe:input source="=&quot;{\&quot;testKey\&quot;:\&quot;{{secrets.MY_TEST_KEY}}\&quot;}&quot;" target="body"/>
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_test_connector</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    
+    <bpmn:endEvent id="EndEvent_1" name="End">
+      <bpmn:incoming>Flow_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    
+    <bpmn:sequenceFlow id="Flow_to_test_connector" sourceRef="StartEvent_1" targetRef="test-secret-connector"/>
+    <bpmn:sequenceFlow id="Flow_to_end" sourceRef="test-secret-connector" targetRef="EndEvent_1"/>
+    
+  </bpmn:process>
+  
+</bpmn:definitions>

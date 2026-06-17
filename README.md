@@ -304,6 +304,19 @@ camunda-sandbox/
 │   └── camunda-lan.yml               ← LAN overlay (redirect URLs use keycloak-service)
 ├── processes/
 │   └── example-process.bpmn        ← Example order processing BPMN
+├── c8-extensions/
+│   ├── build-deploy-custom-connectors.sh  ← Full build + deploy pipeline
+│   └── custom-secret-provider/
+│       ├── pom.xml                        ← Maven project (Java 17)
+│       ├── Dockerfile                     ← Custom Docker image
+│       └── src/main/java/com/example/camunda/secret/
+│           └── EnvVarSecretProvider.java  ← SPI: env var + integer x2
+├── configs/
+│   ├── connector-secrets.yaml     ← K8s Secret for custom secret provider tests
+│   ├── kind-cluster.yaml          ← Kind cluster config (3 nodes, v1.34.0)
+│   ├── pg-clusters.yml            ← PG clusters for identity, keycloak, webmodeler
+│   ├── pg-orchestration-cluster.yml ← PG cluster for orchestration (RDBMS mode)
+│   └── keycloak-instance.yml      ← Keycloak CR (no-domain, port 18080)
 └── scripts/
     ├── 01-install-tools.sh         ← Install kind, kubectl, helm, yq, jq
     ├── 02-create-cluster.sh        ← Create Kind cluster + namespace + /etc/hosts
@@ -312,10 +325,106 @@ camunda-sandbox/
     ├── 05-setup-api-access.sh      ← Create api-cli client + grant roles
     ├── 06-deploy-example-process.sh ← Deploy BPMN + start instances
     ├── cleanup.sh                  ← Delete cluster + remove /etc/hosts
+    ├── deploy-custom-connectors.sh ← Deploy custom connectors with secrets
     ├── get-credentials.sh          ← Print credentials (-q for password only)
     ├── port-forward.sh             ← Port-forward all services (blocks)
     └── status.sh                   ← Show cluster/pod/service status
 ```
+## Custom Secret Provider
+
+The project includes a custom `EnvVarSecretProvider` that extends the Camunda Connector Runtime with environment-variable-based secret resolution and integer value processing.
+
+### How It Works
+
+```
+BPMN: {{secrets.ORDER_BASE_AMOUNT}}
+    │
+    ├─ 1. Try exact env var ORDER_BASE_AMOUNT → not found
+    ├─ 2. Try SECRET_ prefix → SECRET_ORDER_BASE_AMOUNT → found: "5000"
+    ├─ 3. Parse as integer → 5000 × 2 → return "10000"
+    └─ 4. Log at INFO: "Secret 'ORDER_BASE_AMOUNT' = 5000 → processed to 10000 (x2)"
+```
+
+**Lookup algorithm:**
+1. Try the exact environment variable name (e.g. `MY_KEY`)
+2. If not found, try with `SECRET_` prefix (e.g. `SECRET_MY_KEY`)
+3. If found and value is a valid integer → multiply by 2, return result
+4. If found and value is a string → return as-is (never logged at INFO)
+5. If not found → return `null` (SPI chain continues)
+
+### Secret Injection (K8s Best Practice)
+
+K8s Secrets are injected as environment variables via `secretKeyRef` — no file mounts:
+
+```yaml
+env:
+- name: SECRET_ORDER_BASE_AMOUNT
+  valueFrom:
+    secretKeyRef:
+      name: connector-secrets
+      key: ORDER_BASE_AMOUNT
+```
+
+### Built-in Provider Prefix
+
+To prevent the built-in `EnvironmentSecretProvider` from exposing all env vars, the deployment sets:
+```
+CAMUNDA_CONNECTOR_SECRETPROVIDER_ENVIRONMENT_PREFIX=CONNECTOR_
+```
+Only `CONNECTOR_*` vars are handled by the built-in provider; our custom provider handles `SECRET_*`.
+
+### Test Secrets
+
+The `connector-secrets` K8s Secret (`configs/connector-secrets.yaml`) contains 4 test values:
+
+| Secret Key | Value | Type | Resolution |
+|------------|-------|------|------------|
+| `ORDER_BASE_AMOUNT` | `5000` | integer | `"10000"` (x2) |
+| `ORDER_DISCOUNT_RATE` | `15` | integer | `"30"` (x2) |
+| `ORDER_API_KEY` | `sk-abc123xyz` | string | `"sk-abc123xyz"` (as-is) |
+| `CUSTOMER_WELCOME_MSG` | `Hello and Welcome` | string | `"Hello and Welcome"` (as-is) |
+
+### Build & Deploy
+
+```bash
+# Full pipeline: build JAR → Docker image → load into Kind → deploy
+just rebuild-custom-connectors
+
+# Or step-by-step:
+just build-custom-connectors-jar      # Compile Java (Dockerized Maven)
+just build-custom-connectors-image    # Build Docker image
+just load-custom-connectors-image     # Load into Kind cluster
+just create-connector-secrets         # Create K8s Secret
+just deploy-custom-connectors         # Update deployment + rollout
+```
+
+### Verify Secret Resolution
+
+```bash
+# Watch secret provider activity in connector logs
+kubectl logs -l app.kubernetes.io/component=connectors -n camunda --tail=50 | grep EnvVarSecretProvider
+
+# Expected output:
+# INFO  EnvVarSecretProvider : Resolved secret 'ORDER_BASE_AMOUNT' from env var 'SECRET_ORDER_BASE_AMOUNT'
+# INFO  EnvVarSecretProvider : Secret 'ORDER_BASE_AMOUNT' = 5000 → processed to 10000 (x2)
+# INFO  EnvVarSecretProvider : Secret 'ORDER_API_KEY' resolved as string, returned as-is
+```
+
+### Template Naming Convention
+
+When secrets are injected as `SECRET_<KEY>` env vars, reference them in BPMN using the bare key:
+```
+{{secrets.ORDER_BASE_AMOUNT}}   → resolves via SECRET_ORDER_BASE_AMOUNT env var
+{{secrets.ORDER_API_KEY}}       → resolves via SECRET_ORDER_API_KEY env var
+```
+
+The `SECRET_` prefix is stripped automatically by the provider's lookup algorithm.
+
+### Camunda 8 Extensions & Sub-Agent Workflow
+
+This project utilizes a multi-agent architecture to manage Camunda 8 infrastructure. Custom development for Camunda Connectors and Secret Providers (Java SPI) is handled autonomously by the `C8-Extension-Specialist` sub-agent. 
+
+All extension code is isolated in the `/c8-extensions/` directory. The sub-agent is pre-configured to handle the intricacies of deploying locally built Java artifacts into our running `kind` cluster using specialized image loading techniques. Do not manually edit the files in `/c8-extensions/` unless necessary; delegate tasks to the sub-agent instead.
 
 ## Redeploying
 

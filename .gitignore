@@ -10,3 +10,11 @@ debug/
 .values.dev.yaml
 .values.local.yaml
 kubeconfig
+
+# C8 extensions build artifacts
+c8-extensions/.m2/
+c8-extensions/custom-secret-provider/target/
+c8-extensions/custom-secret-provider/*.jar
+
+# OpenCode configuration
+.opencode/

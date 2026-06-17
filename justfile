@@ -63,3 +63,35 @@ lan-hosts:
 # Delete Kind cluster + remove /etc/hosts entries
 cleanup:
     bash scripts/cleanup.sh
+
+# Build custom secret provider JAR with Maven (Docker-based)
+build-custom-connectors-jar:
+    bash -c '\
+        M2_REPO="c8-extensions/.m2/repository" && \
+        mkdir -p "$$M2_REPO" && \
+        docker run --rm \
+            -v "$(pwd)/c8-extensions/custom-secret-provider:/workspace" \
+            -v "$(pwd)/$$M2_REPO:/root/.m2/repository" \
+            -w /workspace \
+            maven:3.9-eclipse-temurin-17 \
+            mvn clean package'
+
+# Build custom Docker image for connectors
+build-custom-connectors-image:
+    docker build -t camunda/connectors-bundle:8.9.5-custom-secrets c8-extensions/custom-secret-provider/
+
+# Load custom connectors image into Kind cluster
+load-custom-connectors-image:
+    kind load docker-image camunda/connectors-bundle:8.9.5-custom-secrets --name camunda-platform-local
+
+# Full rebuild and redeploy of custom connectors (JAR → image → kind → deploy)
+rebuild-custom-connectors:
+    bash c8-extensions/build-deploy-custom-connectors.sh
+
+# Create the connector-secrets K8s Secret with test values
+create-connector-secrets:
+    kubectl apply -f configs/connector-secrets.yaml
+
+# Deploy custom connectors with volume mounts and secrets
+deploy-custom-connectors:
+    bash scripts/deploy-custom-connectors.sh
