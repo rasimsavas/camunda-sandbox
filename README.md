@@ -1,4 +1,4 @@
-# fast-setup — Camunda 8.9 on Kind
+# camunda-sandbox — Camunda 8.9 on Kind
 
 Deploy Camunda 8.9 Self-Managed on a local Kind cluster with a single command or step-by-step scripts.
 
@@ -209,7 +209,7 @@ All settings are in `lib/common.sh` with environment variable overrides:
 ## Directory Structure
 
 ```
-fast-setup/
+camunda-sandbox/
 ├── .camunda-version         ← Camunda version pin (8.9)
 ├── justfile                 ← Task runner recipes
 ├── lib/common.sh            ← Shared env vars + helper functions

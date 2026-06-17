@@ -1,4 +1,4 @@
-# fast-setup/AGENTS.md
+# camunda-sandbox/AGENTS.md
 
 ## Overview
 
@@ -109,7 +109,7 @@ curl -s http://localhost:8080/v2/topology -H "Authorization: Bearer $TOKEN" | jq
 ## Key Files
 
 ```
-fast-setup/
+camunda-sandbox/
 ├── .camunda-version         ← Camunda version pin (8.9)
 ├── justfile                 ← Task runner recipes
 ├── lib/common.sh            ← shared env vars + helper functions (including require_port_forward)
